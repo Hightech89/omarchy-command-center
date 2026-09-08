@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "community.command-center",
+  "name": "Command Center",
+  "version": "0.1.0",
+  "author": "Hightech89",
+  "license": "MIT",
+  "description": "A minimal community Command Center menu for Omarchy.",
+  "kinds": [
+    "menu"
+  ],
+  "entryPoints": {
+    "menu": "Menu.qml"
+  }
+}
