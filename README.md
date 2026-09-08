@@ -4,7 +4,7 @@ Command Center is an early-development community menu plugin for Omarchy 4 / Qua
 
 Current functionality is intentionally minimal: the plugin can be discovered, enabled, and summoned as a simple Omarchy menu that displays "Command Center".
 
-Planned direction: a searchable command palette for common System, Network, Omarchy, and Developer actions.
+Planned direction: a searchable, keyboard-first dashboard for read-only System and Network inspection, deterministic diagnostics, and Linux learning. See [SPEC.md](SPEC.md) for the v0.1 product specification and acceptance criteria.
 
 Arbitrary shell command execution is not a project goal. Actions will be predefined, and user inputs will be validated before they are used.
 
