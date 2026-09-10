@@ -1,0 +1,5 @@
+NAME="Example Linux"
+VERSION_ID="2026.09"
+PRETTY_NAME="Example Linux 2026.09"
+ID=example
+HOME_URL="https://example.invalid/"
