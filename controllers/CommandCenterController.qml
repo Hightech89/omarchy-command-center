@@ -1,0 +1,82 @@
+import QtQml
+
+import "../catalog/CommandCatalog.js" as CommandCatalog
+import "../catalog/Search.js" as Search
+import "CommandCenterState.js" as State
+
+// Navigation-only controller. It accepts stable action IDs and intentionally
+// has no dependency on a service implementation.
+QtObject {
+  id: root
+
+  readonly property string rootRoute: State.Route.Root
+  readonly property string inputRoute: State.Route.Input
+  readonly property string resultRoute: State.Route.Result
+  readonly property var catalog: CommandCatalog.Actions
+
+  property string currentActionId: ""
+  property string route: State.Route.Root
+  property string searchQuery: ""
+  property int selectedIndex: 0
+  property string activationError: ""
+  property var searchResults: CommandCatalog.allActions()
+
+  readonly property var currentAction: CommandCatalog.actionById(currentActionId)
+
+  function setSearchQuery(query) {
+    searchQuery = typeof query === "string" ? query : ""
+    searchResults = Search.search(catalog, searchQuery)
+    selectedIndex = searchResults.length > 0 ? 0 : -1
+  }
+
+  function setSelectedIndex(index) {
+    if (searchResults.length === 0) {
+      selectedIndex = -1
+      return false
+    }
+    if (typeof index !== "number" || !Number.isInteger(index))
+      return false
+    selectedIndex = Math.max(0, Math.min(index, searchResults.length - 1))
+    return true
+  }
+
+  function activateAction(actionId) {
+    var activation = State.activationFor(catalog, actionId)
+    if (!activation.ok) {
+      activationError = activation.reason
+      return false
+    }
+
+    currentActionId = activation.action.id
+    route = activation.route
+    activationError = ""
+    return true
+  }
+
+  function activateSelectedAction() {
+    if (selectedIndex < 0 || selectedIndex >= searchResults.length)
+      return false
+    return activateAction(searchResults[selectedIndex].id)
+  }
+
+  // A child placeholder returns to the action list. The selected action ID is
+  // retained so a future view can restore the matching row without rerouting.
+  function back() {
+    if (route !== State.Route.Root) {
+      route = State.Route.Root
+      return true
+    }
+    if (searchQuery !== "") {
+      setSearchQuery("")
+      return true
+    }
+    return false
+  }
+
+  function reset() {
+    currentActionId = ""
+    route = State.Route.Root
+    activationError = ""
+    setSearchQuery("")
+  }
+}
