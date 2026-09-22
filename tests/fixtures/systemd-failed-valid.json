@@ -1,0 +1,21 @@
+[
+  {
+    "unit": "example-one.service",
+    "description": "Example failed service",
+    "load": "loaded",
+    "active": "failed",
+    "sub": "failed",
+    "following": "",
+    "path": "/org/freedesktop/systemd1/unit/example_2done_2eservice",
+    "job_id": 0,
+    "job_type": "",
+    "job_path": "/"
+  },
+  {
+    "unit": "example-two.timer",
+    "description": "Example timer with spaces",
+    "load": "loaded",
+    "active": "failed",
+    "sub": "failed"
+  }
+]

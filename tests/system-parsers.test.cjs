@@ -18,6 +18,27 @@ test('parses aggregate /proc/stat counters and excludes guest counters from tota
   failed(parsers.parseProcStat('cpu -1 2 3 4\n'))
 })
 
+test('calculates CPU utilization from monotonic samples and parses CPU identity', () => {
+  const first = parsers.parseProcStat('cpu 100 5 20 1000 10 2 3 1 0 0\n').data
+  const second = parsers.parseProcStat('cpu 120 5 30 1060 20 2 3 1 0 0\n').data
+  const usage = parsers.calculateCpuUsage(first, second)
+  assert.equal(usage.ok, true)
+  assert.equal(usage.data.usagePercent, 30)
+  failed(parsers.calculateCpuUsage(second, first))
+  failed(parsers.calculateCpuUsage(first, first))
+
+  const cpu = parsers.parseCpuinfo(fixture('cpuinfo-valid.txt'))
+  assert.equal(cpu.ok, true)
+  assert.equal(cpu.data.model, 'Example CPU @ 3.00GHz')
+  assert.equal(cpu.data.logicalProcessors, 2)
+  const missingModel = parsers.parseCpuinfo('processor: 0\nprocessor: 1\n')
+  assert.equal(missingModel.ok, true)
+  assert.equal(missingModel.completeness, 'partial')
+  assert.equal(missingModel.data.model, null)
+  failed(parsers.parseCpuinfo('model name: Example\n'))
+  failed(parsers.parseCpuinfo('processor: 0\nprocessor: 0\n'))
+})
+
 test('parses memory, supports no configured swap, and rejects impossible or truncated values', () => {
   const result = parsers.parseMeminfo(fixture('meminfo-valid.txt'))
   assert.equal(result.ok, true)
@@ -26,9 +47,71 @@ test('parses memory, supports no configured swap, and rejects impossible or trun
   const noSwap = parsers.parseMeminfo('MemTotal: 10 kB\nMemAvailable: 5 kB\nSwapTotal: 0 kB\nSwapFree: 0 kB\n')
   assert.equal(noSwap.ok, true)
   assert.equal(noSwap.data.swapUsed, 0)
+  assert.equal(noSwap.data.swapConfigured, false)
+  const missingSwap = parsers.parseMeminfo('MemTotal: 10 kB\nMemAvailable: 5 kB\n')
+  assert.equal(missingSwap.ok, true)
+  assert.equal(missingSwap.completeness, 'partial')
+  assert.equal(missingSwap.data.swapTotal, null)
   failed(parsers.parseMeminfo('MemTotal: 10 kB\n'))
   failed(parsers.parseMeminfo('MemTotal: 10 kB\nMemAvailable: 11 kB\n'))
   failed(parsers.parseMeminfo('MemTotal: -1 kB\nMemAvailable: 0 kB\n'))
+})
+
+test('parses bounded hostname and kernel single-line values', () => {
+  assert.equal(parsers.parseHostname('workstation\n').data.value, 'workstation')
+  assert.equal(parsers.parseKernelText('Linux\n').data.value, 'Linux')
+  failed(parsers.parseHostname('\n'))
+  failed(parsers.parseHostname('one\ntwo\n'))
+  failed(parsers.parseHostname('host\tname\n'))
+  failed(parsers.parseHostname('x'.repeat(65) + '\n'))
+  failed(parsers.parseKernelText('Linux\u0000bad\n'))
+})
+
+test('strictly parses findmnt JSON, byte values, and mountpoints with spaces', () => {
+  const disk = parsers.parseDiskUsageFindmntJson(fixture('findmnt-valid.json'))
+  assert.equal(disk.ok, true)
+  assert.equal(disk.data.filesystems.length, 2)
+  assert.equal(disk.data.filesystems[1].target, '/media/Archive Drive')
+  assert.equal(disk.data.filesystems[0].backingSource, '/dev/mapper/root')
+  assert.equal(disk.data.filesystems[0].usePercent, 40)
+
+  const root = parsers.parseRootFindmntJson(fixture('findmnt-root-valid.json'))
+  assert.equal(root.ok, true)
+  assert.equal(root.data.target, '/')
+  failed(parsers.parseDiskUsageFindmntJson(fixture('findmnt-truncated.json')))
+  failed(parsers.parseDiskUsageFindmntJson('{"filesystems":[{"source":"x"}]}'))
+  failed(parsers.parseDiskUsageFindmntJson('{"filesystems":[{"source":"x","fstype":"ext4","size":10,"used":11,"avail":0,"use%":"101%","target":"/x","options":"rw"}]}'))
+  failed(parsers.parseRootFindmntJson('{"filesystems":[]}'))
+})
+
+test('strictly parses failed-unit JSON and preserves explicit scope', () => {
+  const result = parsers.parseFailedUnitsJson(fixture('systemd-failed-valid.json'), 'system')
+  assert.equal(result.ok, true)
+  assert.equal(result.data.count, 2)
+  assert.equal(result.data.units[0].scope, 'system')
+  assert.equal(result.data.units[1].description, 'Example timer with spaces')
+  const empty = parsers.parseFailedUnitsJson(fixture('systemd-failed-empty.json'), 'user')
+  assert.equal(empty.ok, true)
+  assert.equal(empty.data.count, 0)
+  failed(parsers.parseFailedUnitsJson(fixture('systemd-failed-malformed.json'), 'system'))
+  failed(parsers.parseFailedUnitsJson('[{"unit":"bad.service","load":"loaded","active":"active","sub":"running","description":"Bad"}]', 'system'))
+  failed(parsers.parseFailedUnitsJson('[]', 'machine'))
+})
+
+test('parses only documented systemd system states', () => {
+  for (const state of ['running', 'degraded', 'maintenance', 'initializing', 'starting', 'stopping', 'offline', 'unknown']) {
+    const result = parsers.parseSystemdSystemState(state + '\n')
+    assert.equal(result.ok, true)
+    assert.equal(result.data.state, state)
+  }
+  failed(parsers.parseSystemdSystemState('healthy\n'))
+  failed(parsers.parseSystemdSystemState('running\ndegraded\n'))
+})
+
+test('rejects parser inputs beyond the bounded snapshot limit', () => {
+  failed(parsers.parseHostname('x'.repeat(1024 * 1024 + 1)))
+  failed(parsers.parseDiskUsageFindmntJson(' '.repeat(1024 * 1024 + 1)))
+  failed(parsers.parseFailedUnitsJson(' '.repeat(1024 * 1024 + 1), 'system'))
 })
 
 test('parses uptime and load average with bounded numeric/task validation', () => {
@@ -55,6 +138,9 @@ test('parses os-release without executing it and rejects malformed assignments',
   const escaped = parsers.parseOsRelease('NAME="Example \\${notExecuted}"\nVERSION_ID=1\n')
   assert.equal(escaped.ok, true)
   assert.equal(escaped.data.displayName, 'Example ${notExecuted} 1')
+  const fallback = parsers.parseOsRelease('NAME="Fallback Linux"\nVERSION_ID="42"\n')
+  assert.equal(fallback.ok, true)
+  assert.equal(fallback.data.displayName, 'Fallback Linux 42')
   failed(parsers.parseOsRelease('NAME="Only name"\n'))
   failed(parsers.parseOsRelease('NAME="unterminated\nVERSION_ID=1\n'))
   failed(parsers.parseOsRelease('not-an-assignment\n'))

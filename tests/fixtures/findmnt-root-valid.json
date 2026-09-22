@@ -1,0 +1,13 @@
+{
+  "filesystems": [
+    {
+      "source": "/dev/mapper/root[/@]",
+      "fstype": "btrfs",
+      "size": 1000000000,
+      "used": 400000000,
+      "avail": 550000000,
+      "use%": "40%",
+      "target": "/"
+    }
+  ]
+}

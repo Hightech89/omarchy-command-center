@@ -1,0 +1,24 @@
+{
+  "filesystems": [
+    {
+      "source": "/dev/mapper/root[/@]",
+      "fstype": "btrfs",
+      "size": 1000000000,
+      "used": 400000000,
+      "avail": 550000000,
+      "use%": "40%",
+      "target": "/",
+      "options": "rw,relatime,subvol=/@"
+    },
+    {
+      "source": "/dev/sdb1",
+      "fstype": "ext4",
+      "size": 2000000000,
+      "used": 500000000,
+      "avail": 1400000000,
+      "use%": "25%",
+      "target": "/media/Archive Drive",
+      "options": "rw,nosuid,nodev"
+    }
+  ]
+}
