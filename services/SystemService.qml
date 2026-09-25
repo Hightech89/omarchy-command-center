@@ -14,6 +14,9 @@ Scope {
   readonly property var memoryUsageResult: _memoryUsageResult
   readonly property var failedServicesResult: _failedServicesResult
   readonly property var dashboardSystemSnapshotResult: _dashboardSystemSnapshotResult
+  readonly property var dashboardLiveSnapshotResult: _dashboardLiveSnapshotResult
+  readonly property var dashboardCpuSnapshotResult: _dashboardCpuSnapshotResult
+  readonly property var dashboardInventorySnapshotResult: _dashboardInventorySnapshotResult
   readonly property var systemdSystemStateResult: _systemdSystemStateResult
   readonly property bool busy: runner0.busy || runner1.busy || runner2.busy || runner3.busy || _queue.length > 0
 
@@ -29,6 +32,9 @@ Scope {
   property var _memoryUsageResult: _notRefreshed("system.memory-usage")
   property var _failedServicesResult: _notRefreshed("system.failed-services")
   property var _dashboardSystemSnapshotResult: _notRefreshed("dashboard.system")
+  property var _dashboardLiveSnapshotResult: _notRefreshed("dashboard.live")
+  property var _dashboardCpuSnapshotResult: _notRefreshed("dashboard.cpu")
+  property var _dashboardInventorySnapshotResult: _notRefreshed("dashboard.inventory")
   property var _systemdSystemStateResult: _notRefreshed("system.systemd-state")
 
   property int _overviewGeneration: 0
@@ -36,6 +42,9 @@ Scope {
   property int _memoryGeneration: 0
   property int _failedGeneration: 0
   property int _dashboardGeneration: 0
+  property int _dashboardLiveGeneration: 0
+  property int _dashboardCpuGeneration: 0
+  property int _dashboardInventoryGeneration: 0
   property int _stateGeneration: 0
 
   property var _overviewContext: null
@@ -43,6 +52,9 @@ Scope {
   property var _memoryContext: null
   property var _failedContext: null
   property var _dashboardContext: null
+  property var _dashboardLiveContext: null
+  property var _dashboardCpuSnapshotContext: null
+  property var _dashboardInventoryContext: null
   property var _stateContext: null
   property var _overviewCpuContext: null
   property var _dashboardCpuContext: null
@@ -146,6 +158,9 @@ Scope {
     if (feature === "memory") return _memoryContext
     if (feature === "failed") return _failedContext
     if (feature === "dashboard") return _dashboardContext
+    if (feature === "dashboardLive") return _dashboardLiveContext
+    if (feature === "dashboardCpu") return _dashboardCpuSnapshotContext
+    if (feature === "dashboardInventory") return _dashboardInventoryContext
     return _stateContext
   }
 
@@ -155,6 +170,9 @@ Scope {
     else if (feature === "memory") _memoryContext = context
     else if (feature === "failed") _failedContext = context
     else if (feature === "dashboard") _dashboardContext = context
+    else if (feature === "dashboardLive") _dashboardLiveContext = context
+    else if (feature === "dashboardCpu") _dashboardCpuSnapshotContext = context
+    else if (feature === "dashboardInventory") _dashboardInventoryContext = context
     else _stateContext = context
   }
 
@@ -164,6 +182,9 @@ Scope {
     if (feature === "memory") return ++_memoryGeneration
     if (feature === "failed") return ++_failedGeneration
     if (feature === "dashboard") return ++_dashboardGeneration
+    if (feature === "dashboardLive") return ++_dashboardLiveGeneration
+    if (feature === "dashboardCpu") return ++_dashboardCpuGeneration
+    if (feature === "dashboardInventory") return ++_dashboardInventoryGeneration
     return ++_stateGeneration
   }
 
@@ -398,6 +419,9 @@ Scope {
   }
 
   function _scopeData(scope, component) {
+    if (!component)
+      return { scope: scope, status: Result.Status.Unavailable, count: null,
+        reason: "not-requested", message: "This scope was not requested." }
     return { scope: scope, status: component.status,
       count: _successful(component) ? component.data.count : null,
       reason: component.reason, message: component.message }
@@ -496,7 +520,7 @@ Scope {
           summary.completeness === Result.Completeness.Complete ? "Failed services refreshed." : "Failed services are partially available.",
           _source("/usr/bin/systemctl", "systemctl --system/--user --failed --output=json list-units"))
       }
-    } else if (context.feature === "dashboard") {
+    } else if (context.feature === "dashboard" || context.feature === "dashboardLive" || context.feature === "dashboardCpu" || context.feature === "dashboardInventory") {
       var dashboardFailed = _failedData({ system: components.failedSystem, user: components.failedUser })
       var dashboardData = {
         cpu: _componentData(components.cpuUsage),
@@ -542,6 +566,12 @@ Scope {
     } else if (feature === "dashboard") {
       _dashboardSystemSnapshotResult = result
       if (emitCompletion) dashboardSystemSnapshotCompleted(result)
+    } else if (feature === "dashboardLive") {
+      _dashboardLiveSnapshotResult = result
+    } else if (feature === "dashboardCpu") {
+      _dashboardCpuSnapshotResult = result
+    } else if (feature === "dashboardInventory") {
+      _dashboardInventorySnapshotResult = result
     } else {
       _systemdSystemStateResult = result
       if (emitCompletion) systemdSystemStateCompleted(result)
@@ -558,7 +588,7 @@ Scope {
       overviewCpuTimer.stop()
       _overviewCpuContext = null
     }
-    if (feature === "dashboard" && _dashboardCpuContext === context) {
+    if ((feature === "dashboard" || feature === "dashboardLive" || feature === "dashboardCpu") && _dashboardCpuContext === context) {
       dashboardCpuTimer.stop()
       _dashboardCpuContext = null
     }
@@ -628,6 +658,31 @@ Scope {
     return context.generation
   }
 
+  // Separating live from inventory probes avoids rerunning systemd/findmnt
+  // when the visible dashboard samples CPU, memory, load, and uptime.
+  function refreshDashboardLiveSnapshot() {
+    var context = _newContext("dashboardLive", "dashboard.live", 3)
+    _enqueue(context, "meminfo", "memory")
+    _enqueue(context, "uptime", "uptime")
+    _enqueue(context, "loadavg", "load")
+    return context.generation
+  }
+
+  function refreshDashboardCpuSnapshot() {
+    var context = _newContext("dashboardCpu", "dashboard.cpu", 1)
+    _enqueue(context, "proc-stat-first", "cpuUsage")
+    return context.generation
+  }
+
+  function refreshDashboardInventorySnapshot() {
+    var context = _newContext("dashboardInventory", "dashboard.inventory", 4)
+    _enqueue(context, "root-findmnt", "rootStorage")
+    _enqueue(context, "failed-system", "failedSystem")
+    _enqueue(context, "failed-user", "failedUser")
+    _enqueue(context, "systemd-state", "systemState")
+    return context.generation
+  }
+
   function refreshSystemdSystemState() {
     var context = _newContext("state", "system.systemd-state", 1)
     _enqueue(context, "systemd-state", "systemState")
@@ -639,6 +694,9 @@ Scope {
   function cancelMemoryUsage() { return _cancelPublic("memory", "system.memory-usage") }
   function cancelFailedServices() { return _cancelPublic("failed", "system.failed-services") }
   function cancelDashboardSystemSnapshot() { return _cancelPublic("dashboard", "dashboard.system") }
+  function cancelDashboardLiveSnapshot() { return _cancelPublic("dashboardLive", "dashboard.live") }
+  function cancelDashboardCpuSnapshot() { return _cancelPublic("dashboardCpu", "dashboard.cpu") }
+  function cancelDashboardInventorySnapshot() { return _cancelPublic("dashboardInventory", "dashboard.inventory") }
   function cancelSystemdSystemState() { return _cancelPublic("state", "system.systemd-state") }
 
   function cancelAll() {
@@ -647,6 +705,9 @@ Scope {
     cancelMemoryUsage()
     cancelFailedServices()
     cancelDashboardSystemSnapshot()
+    cancelDashboardLiveSnapshot()
+    cancelDashboardCpuSnapshot()
+    cancelDashboardInventorySnapshot()
     cancelSystemdSystemState()
   }
 

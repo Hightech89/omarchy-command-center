@@ -13,6 +13,7 @@ QtObject {
   readonly property string inputRoute: State.Route.Input
   readonly property string resultRoute: State.Route.Result
   readonly property var catalog: CommandCatalog.Actions
+  property var systemService: null
 
   property string currentActionId: ""
   property string route: State.Route.Root
@@ -40,6 +41,12 @@ QtObject {
     return true
   }
 
+  function moveSelection(delta) {
+    if (searchResults.length === 0) return false
+    selectedIndex = (selectedIndex + delta + searchResults.length) % searchResults.length
+    return true
+  }
+
   function activateAction(actionId) {
     var activation = State.activationFor(catalog, actionId)
     if (!activation.ok) {
@@ -58,6 +65,20 @@ QtObject {
       return false
     return activateAction(searchResults[selectedIndex].id)
   }
+
+  // The UI only submits stable action IDs; this is the trusted service switch.
+  function refreshCurrentAction() {
+    if (!systemService) return false
+    if (currentActionId === "system.overview") { systemService.refreshSystemOverview(); return true }
+    if (currentActionId === "system.disk-usage") { systemService.refreshDiskUsage(); return true }
+    if (currentActionId === "system.memory-usage") { systemService.refreshMemoryUsage(); return true }
+    if (currentActionId === "system.failed-services") { systemService.refreshFailedServices(); return true }
+    return false
+  }
+
+  function refreshDashboardLive() { if (systemService) systemService.refreshDashboardLiveSnapshot() }
+  function refreshDashboardCpu() { if (systemService) systemService.refreshDashboardCpuSnapshot() }
+  function refreshDashboardInventory() { if (systemService) systemService.refreshDashboardInventorySnapshot() }
 
   // A child placeholder returns to the action list. The selected action ID is
   // retained so a future view can restore the matching row without rerouting.
