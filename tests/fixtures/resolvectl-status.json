@@ -1,0 +1,5 @@
+[
+  {"fallbackServers":[{"addressString":"203.0.113.53","address":[203,0,113,53],"family":2,"port":53,"accessible":true}],"resolvConfMode":"stub"},
+  {"ifname":"eth0","ifindex":2,"defaultRoute":true,"currentServer":{"addressString":"192.0.2.53","address":[192,0,2,53],"family":2,"port":53,"ifindex":2,"accessible":true},"servers":[{"addressString":"192.0.2.53","address":[192,0,2,53],"family":2,"port":53,"ifindex":2,"accessible":true},{"addressString":"2001:db8::53","address":[32,1,13,184,0,0,0,0,0,0,0,0,0,0,0,83],"family":10,"port":53,"ifindex":2,"accessible":true}],"searchDomains":[{"name":"example.test","routeOnly":false,"ifindex":2},{"name":"corp.example.test","routeOnly":true,"ifindex":2}]},
+  {"ifname":"eth1","ifindex":3,"defaultRoute":false}
+]

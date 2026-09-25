@@ -1,0 +1,3 @@
+[
+  {"dst":"default","gateway":"192.0.2.1","dev":"eth0","protocol":"dhcp","prefsrc":"192.0.2.44","metric":600,"flags":[]}
+]

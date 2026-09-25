@@ -1,0 +1,5 @@
+[
+  {"dst":"default","gateway":"198.51.100.1","dev":"eth1","metric":100,"flags":[]},
+  {"dst":"default","gateway":"192.0.2.1","dev":"eth0","metric":100,"flags":[]},
+  {"dst":"default","dev":"tun0","metric":500,"flags":[]}
+]

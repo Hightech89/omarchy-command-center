@@ -55,7 +55,7 @@ var Actions = Object.freeze([
     risk: "read-only",
     inputKind: "none",
     resultView: "network-overview",
-    learningLabel: "IP routing and address information"
+    learningLabel: "ip -j route/link/address · resolvectl status"
   },
   {
     id: "network.listening-ports",
@@ -66,7 +66,7 @@ var Actions = Object.freeze([
     risk: "read-only",
     inputKind: "none",
     resultView: "listening-ports",
-    learningLabel: "ss -H -lntu -p"
+    learningLabel: "ss -H -l -n -t -u -p"
   },
   {
     id: "network.ping-host",
@@ -77,7 +77,7 @@ var Actions = Object.freeze([
     risk: "read-only",
     inputKind: "host",
     resultView: "ping-host",
-    learningLabel: "Ping a validated host"
+    learningLabel: "ping"
   },
   {
     id: "network.dns-lookup",
@@ -88,7 +88,7 @@ var Actions = Object.freeze([
     risk: "read-only",
     inputKind: "dns-name",
     resultView: "dns-lookup",
-    learningLabel: "DNS A and AAAA lookup"
+    learningLabel: "resolvectl query"
   },
   {
     id: "diagnostics.system-health",

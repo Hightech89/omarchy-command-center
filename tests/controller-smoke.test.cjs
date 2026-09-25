@@ -29,6 +29,12 @@ test('controller routes only Ping Host and DNS Lookup to input placeholders', ()
   }
 })
 
+test('input action results return to their input route while non-input results return to root', () => {
+  assert.match(controllerSource, /route === State\.Route\.Result && currentAction && currentAction\.inputKind !== "none"/)
+  assert.match(controllerSource, /route = State\.Route\.Input/)
+  assert.match(controllerSource, /if \(route !== State\.Route\.Root\)/)
+})
+
 test('controller exposes reset/back state and no execution-shaped public API', () => {
   assert.match(controllerSource, /function back\(\)/)
   assert.match(controllerSource, /function reset\(\)/)
@@ -36,4 +42,7 @@ test('controller exposes reset/back state and no execution-shaped public API', (
   assert.match(controllerSource, /function activateAction\(actionId\)/)
   assert.doesNotMatch(controllerSource, /ProcessRunner|executable|arguments|argv|command\s*:/i)
   assert.doesNotMatch(controllerSource, /\.run\s*\(/)
+  assert.match(controllerSource, /function submitCurrentInput\(input\)/)
+  assert.match(controllerSource, /networkService\.refreshNetworkOverview\(\)/)
+  assert.match(controllerSource, /networkService\.refreshListeningPorts\(\)/)
 })

@@ -12,12 +12,25 @@ BorderSurface {
   color: Color.menu.background
   borderSpec: Border.localOrSurfaceSpec("menu", "border", Color.menu.border, Color.menu.border, Math.max(1, Style.normalBorderWidth))
   implicitHeight: column.implicitHeight + Style.spacing.xl * 2
+  FontMetrics { id: detailMetrics; font: detailText.font }
   Column {
     id: column
     anchors { left: parent.left; right: parent.right; margins: Style.spacing.xl; verticalCenter: parent.verticalCenter }
     spacing: Style.spacing.xs
     Text { text: root.title; textFormat: Text.PlainText; color: Color.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.bodySmall }
     Text { text: root.value; textFormat: Text.PlainText; color: root.alert ? Color.urgent : Color.menu.text; font.family: Style.font.menuFamily; font.pixelSize: Style.font.title; elide: Text.ElideRight; width: parent.width }
-    Text { visible: root.detail !== ""; text: root.detail; textFormat: Text.PlainText; color: Color.muted; font.family: Style.font.menuFamily; font.pixelSize: Style.font.bodySmall; elide: Text.ElideRight; width: parent.width }
+    Text {
+      id: detailText
+      text: root.detail
+      textFormat: Text.PlainText
+      color: Color.muted
+      font.family: Style.font.menuFamily
+      font.pixelSize: Style.font.bodySmall
+      elide: Text.ElideRight
+      wrapMode: Text.NoWrap
+      width: parent.width
+      height: detailMetrics.height
+      clip: true
+    }
   }
 }

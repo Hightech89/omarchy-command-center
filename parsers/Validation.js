@@ -47,7 +47,7 @@ function validateIpv6(value) {
     parts = value.split(":")
   }
 
-  if (parts.length === 0 || parts.some(function(part) { return part.length === 0 }))
+  if (parts.some(function(part) { return part.length === 0 }))
     return invalid("invalid-ipv6", "IPv6 groups cannot be empty outside :: compression.")
 
   var groups = 0
@@ -113,5 +113,10 @@ function validatePingTarget(value) {
 }
 
 function validateDnsName(value) {
-  return validateHostInput(value)
+  var result = validateHostInput(value)
+  if (!result.ok)
+    return result
+  if (result.kind !== "name")
+    return invalid("dns-name-required", "Enter an ASCII DNS hostname, not an IP address.")
+  return result
 }

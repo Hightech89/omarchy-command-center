@@ -22,6 +22,7 @@ test('accepts strict IPv4 and rejects malformed dotted decimal without hostname 
 })
 
 test('accepts compressed, uncompressed, and embedded-IPv4 IPv6 forms', () => {
+  accepts('::', 'ipv6')
   accepts('2001:DB8::1', 'ipv6', '2001:db8::1')
   accepts('2001:db8:0:0:0:0:2:1', 'ipv6')
   accepts('::ffff:192.0.2.128', 'ipv6')
@@ -47,7 +48,9 @@ test('rejects unsafe, unsupported, and overlong input forms', () => {
     'host\nname']) rejects(value)
 })
 
-test('Ping and DNS entry points return the same typed result contract', () => {
+test('Ping accepts typed hosts and DNS accepts names only', () => {
   assert.deepEqual(validation.validatePingTarget('198.51.100.7'), validation.validateHostInput('198.51.100.7'))
   assert.deepEqual(validation.validateDnsName('example.test'), validation.validateHostInput('example.test'))
+  assert.equal(validation.validateDnsName('198.51.100.7').ok, false)
+  assert.equal(validation.validateDnsName('2001:db8::1').ok, false)
 })

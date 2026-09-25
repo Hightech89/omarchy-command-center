@@ -1,0 +1,4 @@
+tcp LISTEN 0 4096 127.0.0.1:8080 0.0.0.0:* users:(("demo-server",pid=4242,fd=7),("demo-worker",pid=4243,fd=8))
+udp UNCONN 0 0 0.0.0.0:5353 0.0.0.0:*
+tcp LISTEN 0 128 [2001:db8::1]:443 [::]:*
+udp UNCONN 0 0 *:1716 *:* users:(("exampled",pid=77,fd=9))

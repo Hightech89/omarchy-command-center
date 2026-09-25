@@ -1,0 +1,5 @@
+[
+  {"ifindex":1,"ifname":"lo","flags":["LOOPBACK","UP","LOWER_UP"],"operstate":"UNKNOWN","link_type":"loopback"},
+  {"ifindex":2,"ifname":"eth0","flags":["BROADCAST","MULTICAST","UP","LOWER_UP"],"operstate":"UP","link_type":"ether"},
+  {"ifindex":3,"ifname":"eth1","flags":["NO-CARRIER","BROADCAST","MULTICAST","UP"],"operstate":"DOWN","link_type":"ether"}
+]

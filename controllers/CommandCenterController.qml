@@ -4,8 +4,8 @@ import "../catalog/CommandCatalog.js" as CommandCatalog
 import "../catalog/Search.js" as Search
 import "CommandCenterState.js" as State
 
-// Navigation-only controller. It accepts stable action IDs and intentionally
-// has no dependency on a service implementation.
+// Typed controller. It maps stable action IDs to explicit service methods and
+// exposes no process-definition boundary.
 QtObject {
   id: root
 
@@ -14,6 +14,7 @@ QtObject {
   readonly property string resultRoute: State.Route.Result
   readonly property var catalog: CommandCatalog.Actions
   property var systemService: null
+  property var networkService: null
 
   property string currentActionId: ""
   property string route: State.Route.Root
@@ -68,21 +69,38 @@ QtObject {
 
   // The UI only submits stable action IDs; this is the trusted service switch.
   function refreshCurrentAction() {
-    if (!systemService) return false
-    if (currentActionId === "system.overview") { systemService.refreshSystemOverview(); return true }
-    if (currentActionId === "system.disk-usage") { systemService.refreshDiskUsage(); return true }
-    if (currentActionId === "system.memory-usage") { systemService.refreshMemoryUsage(); return true }
-    if (currentActionId === "system.failed-services") { systemService.refreshFailedServices(); return true }
+    if (currentActionId === "system.overview" && systemService) { systemService.refreshSystemOverview(); return true }
+    if (currentActionId === "system.disk-usage" && systemService) { systemService.refreshDiskUsage(); return true }
+    if (currentActionId === "system.memory-usage" && systemService) { systemService.refreshMemoryUsage(); return true }
+    if (currentActionId === "system.failed-services" && systemService) { systemService.refreshFailedServices(); return true }
+    if (currentActionId === "network.overview" && networkService) { networkService.refreshNetworkOverview(); return true }
+    if (currentActionId === "network.listening-ports" && networkService) { networkService.refreshListeningPorts(); return true }
     return false
+  }
+
+  function submitCurrentInput(input) {
+    if (!networkService || !input || typeof input !== "object" || input.ok !== true)
+      return false
+    var generation = 0
+    if (currentActionId === "network.ping-host") generation = networkService.pingHost(input)
+    else if (currentActionId === "network.dns-lookup") generation = networkService.lookupDns(input)
+    else return false
+    if (generation > 0) route = State.Route.Result
+    return generation > 0
   }
 
   function refreshDashboardLive() { if (systemService) systemService.refreshDashboardLiveSnapshot() }
   function refreshDashboardCpu() { if (systemService) systemService.refreshDashboardCpuSnapshot() }
   function refreshDashboardInventory() { if (systemService) systemService.refreshDashboardInventorySnapshot() }
+  function refreshDashboardNetwork() { if (networkService) networkService.refreshDashboardNetworkSnapshot() }
 
   // A child placeholder returns to the action list. The selected action ID is
   // retained so a future view can restore the matching row without rerouting.
   function back() {
+    if (route === State.Route.Result && currentAction && currentAction.inputKind !== "none") {
+      route = State.Route.Input
+      return true
+    }
     if (route !== State.Route.Root) {
       route = State.Route.Root
       return true
