@@ -100,6 +100,10 @@ test('parses TCP/UDP, IPv4/IPv6, wildcard, scoped, and owner-limited ss rows', (
 
   const scoped = parsers.parseSsListening('udp UNCONN 0 0 127.0.0.53%lo:53 0.0.0.0:*')
   assert.equal(scoped.data.sockets[0].localZone, 'lo')
+  const bracketedScoped = parsers.parseSsListening('udp UNCONN 0 0 [fe80::3435:7daa:670f:cdee]%wlp0s20f3:546 [::]:*')
+  assert.equal(bracketedScoped.ok, true)
+  assert.equal(bracketedScoped.data.sockets[0].localAddress, 'fe80::3435:7daa:670f:cdee')
+  assert.equal(bracketedScoped.data.sockets[0].localZone, 'wlp0s20f3')
   const unbracketed = parsers.parseSsListening('tcp LISTEN 0 1 2001:db8::2:443 :::*')
   assert.equal(unbracketed.data.sockets[0].localAddress, '2001:db8::2')
   failed(parsers.parseSsListening('tcp LISTEN broken row'))

@@ -257,20 +257,24 @@ function endpoint(value, label, local) {
   var text = field.value
   var address
   var portText
+  var zone = null
   if (text.charAt(0) === "[") {
-    var close = text.lastIndexOf("]:")
-    if (close < 2) return failure("malformed-output", label + " bracketed endpoint is invalid.")
-    address = text.slice(1, close)
-    portText = text.slice(close + 2)
+    var bracketed = /^\[([^\]]+)\](?:%([^:\s]+))?:(\*|[0-9]+)$/.exec(text)
+    if (!bracketed) return failure("malformed-output", label + " bracketed endpoint is invalid.")
+    address = bracketed[1]
+    zone = bracketed[2] || null
+    portText = bracketed[3]
   } else {
     var colon = text.lastIndexOf(":")
     if (colon < 1) return failure("malformed-output", label + " endpoint is missing a port.")
     address = text.slice(0, colon)
     portText = text.slice(colon + 1)
   }
-  var zone = null
   var percent = address.lastIndexOf("%")
-  if (percent > 0) { zone = address.slice(percent + 1); address = address.slice(0, percent) }
+  if (percent > 0) {
+    if (zone !== null) return failure("malformed-output", label + " endpoint has multiple zones.")
+    zone = address.slice(percent + 1); address = address.slice(0, percent)
+  }
   if (address === "") address = "::"
   if (address !== "*" && ipFamily(address) === null) return failure("malformed-output", label + " address is invalid.")
   var port = portText === "*" ? null : Number(portText)

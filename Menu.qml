@@ -56,7 +56,7 @@ Item {
   }
   function open(payloadJson) { opened = true; controller.reset(); startDashboard(); Qt.callLater(function() { keyCatcher.forceActiveFocus() }) }
   function close() { opened = false; stopDashboard(); pendingActionRefresh = false; pendingNetworkInput = null; diagnosticsService.cancel(); systemService.cancelAll(); networkService.cancelAll(); uptimeSeconds = -1; controller.reset() }
-  function dismiss() { close(); if (shell && typeof shell.hide === "function") shell.hide((manifest && manifest.id) || "community.command-center") }
+  function dismiss() { close(); if (shell && typeof shell.hide === "function") shell.hide((manifest && manifest.id) || "io.github.hightech89.command-center") }
   function activate(actionId) {
     stopDashboard(); diagnosticsService.cancel(); systemService.cancelAll(); networkService.cancelAll()
     if (controller.activateAction(actionId) && controller.route === controller.resultRoute) {

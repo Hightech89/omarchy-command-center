@@ -1,7 +1,7 @@
 # Omarchy Command Center — Product Specification
 
 Status: v0.1 source of truth  
-Product: `community.command-center`  
+Product: `io.github.hightech89.command-center`
 Version: 0.1
 
 ## 1. Product definition

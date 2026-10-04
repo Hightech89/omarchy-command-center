@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "id": "community.command-center",
+  "id": "io.github.hightech89.command-center",
   "name": "Command Center",
   "version": "0.1.0",
   "author": "Hightech89",
   "license": "MIT",
-  "description": "A minimal community Command Center menu for Omarchy.",
+  "description": "A searchable Linux diagnostics and administration dashboard for Omarchy.",
   "kinds": [
     "menu"
   ],
