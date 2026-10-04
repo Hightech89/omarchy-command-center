@@ -725,7 +725,7 @@ Scope {
 
   Timer {
     id: overviewCpuTimer
-    interval: 500
+    interval: 1000
     repeat: false
     onTriggered: {
       var context = root._overviewCpuContext

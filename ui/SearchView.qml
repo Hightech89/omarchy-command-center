@@ -17,8 +17,8 @@ Item {
       width: parent.width
       placeholderText: "Search diagnostics and inspection tools"
       text: root.controller ? root.controller.searchQuery : ""
-      onTextEdited: if (root.controller) root.controller.setSearchQuery(text)
-      onAccepted: root.activate(root.controller.searchResults[root.controller.selectedIndex].id)
+      onTextEdited: if (root.controller) { root.controller.setSearchQuery(text); root.reveal() }
+      onAccepted: if (root.controller && root.controller.selectedIndex >= 0) root.activate(root.controller.searchResults[root.controller.selectedIndex].id)
     }
     ListView {
       id: list

@@ -35,5 +35,6 @@ test('SystemService contains the exact preferred system request shapes', () => {
   assert.match(source, /"--system", "--failed"/)
   assert.match(source, /"--user", "--failed"/)
   assert.match(source, /arguments:\s*\["is-system-running"\]/)
-  assert.match(source, /interval:\s*500/)
+  assert.match(source, /id:\s*overviewCpuTimer[\s\S]*?interval:\s*1000/)
+  assert.match(source, /id:\s*dashboardCpuTimer[\s\S]*?interval:\s*500/)
 })
