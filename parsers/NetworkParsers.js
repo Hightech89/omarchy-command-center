@@ -88,7 +88,7 @@ function optionalString(record, key, label) {
   return cleanString(record[key], label, false, MAX_DISPLAY_LENGTH)
 }
 
-function parseIpRouteJson(text) {
+function parseIpRouteJson(text, requestedFamily) {
   var decoded = jsonArray(text, "ip route")
   if (!decoded.ok) return decoded
   var routes = []
@@ -108,9 +108,11 @@ function parseIpRouteJson(text) {
     if (metric !== null && !safeInteger(metric, 0, 4294967295)) return failure("malformed-output", "Route metric is invalid.")
     if (row.flags !== undefined && (!Array.isArray(row.flags) || row.flags.some(function(flag) { return typeof flag !== "string" })))
       return failure("malformed-output", "Route flags must be strings.")
+    var family = gateway.value ? ipFamily(gateway.value) : (prefsrc.value ? ipFamily(prefsrc.value) : null)
+    if (requestedFamily && family && family !== requestedFamily) return failure("malformed-output", "Route address family does not match the requested family.")
     routes.push({ destination: "default", interfaceName: dev.value, gateway: gateway.value,
       preferredSource: prefsrc.value, metric: metric, protocol: protocol.value,
-      family: gateway.value ? ipFamily(gateway.value) : (prefsrc.value ? ipFamily(prefsrc.value) : null) })
+      family: family || requestedFamily || null })
   }
   return parsed({ routes: routes })
 }
@@ -415,7 +417,7 @@ function selectPrimaryRoute(routes) {
 function deriveNetworkOverview(routeData, linkData, addressData, dnsData) {
   var selected = selectPrimaryRoute(routeData.routes)
   if (selected.route === null) return parsed({ connectionState: "no-default-route", primaryInterface: null,
-    route: null, routeSelection: selected, ipv4: [], ipv6: [], linkLocal: [], dnsServers: [], searchDomains: [] })
+    route: null, defaultRoutes: routeData.routes.slice(), routeSelection: selected, ipv4: [], ipv6: [], linkLocal: [], dnsServers: [], searchDomains: [] })
   var route = selected.route
   var link = linkData.links.filter(function(item) { return item.name === route.interfaceName })[0] || null
   var addressInterface = addressData.interfaces.filter(function(item) { return item.name === route.interfaceName })[0] || null
@@ -437,7 +439,7 @@ function deriveNetworkOverview(routeData, linkData, addressData, dnsData) {
     : (!link.administrativelyUp || (!link.carrierUp && !link.pointToPoint)) ? "interface-down"
     : (ipv4.length === 0 && ipv6.length === 0) ? "no-usable-address" : "connected-local"
   return parsed({ connectionState: connectionState, primaryInterface: link,
-    route: route, routeSelection: selected, ipv4: ipv4, ipv6: ipv6, linkLocal: linkLocal,
+    route: route, defaultRoutes: routeData.routes.slice(), routeSelection: selected, ipv4: ipv4, ipv6: ipv6, linkLocal: linkLocal,
     dnsServers: servers, searchDomains: dnsSource ? dnsSource.searchDomains.slice() : [] },
     dnsSource ? "complete" : "partial", dnsSource ? [] : ["DNS information is unavailable for the selected interface."])
 }

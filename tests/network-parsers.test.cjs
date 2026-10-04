@@ -22,6 +22,9 @@ test('strictly parses default routes and deterministically selects lowest-metric
   assert.equal(selected.multipleRoutes, true)
 
   const onLink = parsers.parseIpRouteJson('[{"dst":"default","dev":"tun0","flags":[]}]')
+  const ipv6OnLink = parsers.parseIpRouteJson('[{"dst":"default","dev":"tun0","flags":[]}]', 'ipv6')
+  assert.equal(ipv6OnLink.data.routes[0].family, 'ipv6')
+  failed(parsers.parseIpRouteJson('[{"dst":"default","dev":"tun0","gateway":"192.0.2.1"}]', 'ipv6'))
   assert.equal(onLink.ok, true)
   assert.equal(onLink.data.routes[0].gateway, null)
   failed(parsers.parseIpRouteJson('{"dst":"default"}'))

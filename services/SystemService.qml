@@ -547,6 +547,7 @@ Scope {
           completeness: Result.Completeness.Partial })
       }
     }
+    result.serviceGeneration = context.generation
     _publish(context.feature, result, true)
   }
 

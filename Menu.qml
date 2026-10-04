@@ -19,10 +19,11 @@ Item {
 
   SystemService { id: systemService }
   NetworkService { id: networkService }
-  CommandCenterController { id: controller; systemService: systemService; networkService: networkService }
+  DiagnosticsService { id: diagnosticsService; systemService: systemService; networkService: networkService }
+  CommandCenterController { id: controller; systemService: systemService; networkService: networkService; diagnosticsService: diagnosticsService }
 
   function startDashboard() {
-    if (!opened || controller.route !== controller.rootRoute) return
+    if (!opened || controller.route !== controller.rootRoute || diagnosticsService.running) return
     pendingNetworkRefresh = true
     controller.refreshDashboardCpu()
     controller.refreshDashboardLive()
@@ -36,7 +37,7 @@ Item {
     networkService.cancelDashboardNetworkSnapshot()
   }
   function tryStartPending() {
-    if (!opened || systemService.busy || networkService.busy) return
+    if (!opened || systemService.busy || networkService.busy || diagnosticsService.running) return
     if (pendingNetworkInput !== null) {
       var input = pendingNetworkInput
       pendingNetworkInput = null
@@ -54,10 +55,10 @@ Item {
     }
   }
   function open(payloadJson) { opened = true; controller.reset(); startDashboard(); Qt.callLater(function() { keyCatcher.forceActiveFocus() }) }
-  function close() { opened = false; stopDashboard(); pendingActionRefresh = false; pendingNetworkInput = null; systemService.cancelAll(); networkService.cancelAll(); uptimeSeconds = -1; controller.reset() }
+  function close() { opened = false; stopDashboard(); pendingActionRefresh = false; pendingNetworkInput = null; diagnosticsService.cancel(); systemService.cancelAll(); networkService.cancelAll(); uptimeSeconds = -1; controller.reset() }
   function dismiss() { close(); if (shell && typeof shell.hide === "function") shell.hide((manifest && manifest.id) || "community.command-center") }
   function activate(actionId) {
-    stopDashboard(); systemService.cancelAll(); networkService.cancelAll()
+    stopDashboard(); diagnosticsService.cancel(); systemService.cancelAll(); networkService.cancelAll()
     if (controller.activateAction(actionId) && controller.route === controller.resultRoute) {
       pendingActionRefresh = true
       tryStartPending()
@@ -71,7 +72,7 @@ Item {
   function backOrDismiss() {
     if (controller.route !== controller.rootRoute) {
       pendingActionRefresh = false; pendingNetworkInput = null
-      systemService.cancelAll(); networkService.cancelAll(); controller.back(); startDashboard()
+      diagnosticsService.cancel(); systemService.cancelAll(); networkService.cancelAll(); controller.back(); startDashboard()
     } else if (!controller.back()) dismiss()
     if (controller.route !== controller.inputRoute)
       Qt.callLater(function() { keyCatcher.forceActiveFocus() })
@@ -96,10 +97,10 @@ Item {
     }
   }
   Connections { target: networkService; function onBusyChanged() { root.tryStartPending() } }
-  Timer { id: cpuTimer; interval: 2000; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !networkService.busy) controller.refreshDashboardCpu() }
-  Timer { id: liveTimer; interval: 5000; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !networkService.busy) controller.refreshDashboardLive() }
-  Timer { id: inventoryTimer; interval: 30000; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !networkService.busy) controller.refreshDashboardInventory() }
-  Timer { id: networkTimer; interval: 5500; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !systemService.busy && !networkService.busy) controller.refreshDashboardNetwork() }
+  Timer { id: cpuTimer; interval: 2000; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !diagnosticsService.running && !networkService.busy) controller.refreshDashboardCpu() }
+  Timer { id: liveTimer; interval: 5000; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !diagnosticsService.running && !networkService.busy) controller.refreshDashboardLive() }
+  Timer { id: inventoryTimer; interval: 30000; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !diagnosticsService.running && !networkService.busy) controller.refreshDashboardInventory() }
+  Timer { id: networkTimer; interval: 5500; repeat: true; onTriggered: if (root.opened && controller.route === controller.rootRoute && !diagnosticsService.running && !systemService.busy && !networkService.busy) controller.refreshDashboardNetwork() }
   Timer { id: uptimeTimer; interval: 1000; repeat: true; onTriggered: if (root.uptimeSeconds >= 0) root.uptimeSeconds += 1 }
 
   PanelWindow {
@@ -168,7 +169,8 @@ Item {
             ListeningPortsView { anchors.fill: parent; visible: controller.route === controller.resultRoute && controller.currentActionId === "network.listening-ports"; result: root.currentResult() }
             PingResultView { anchors.fill: parent; visible: controller.route === controller.resultRoute && controller.currentActionId === "network.ping-host"; result: root.currentResult(); onAnotherRequested: root.backOrDismiss() }
             DnsLookupView { anchors.fill: parent; visible: controller.route === controller.resultRoute && controller.currentActionId === "network.dns-lookup"; result: root.currentResult(); onAnotherRequested: root.backOrDismiss() }
-            StateMessage { anchors.fill: parent; visible: controller.route === controller.resultRoute && controller.currentActionId.indexOf("diagnostics.") === 0; result: ({ status: "unavailable", message: "Diagnostics are planned for Milestone 7 and do not execute yet." }) }
+            SystemHealthView { anchors.fill: parent; visible: controller.route === controller.resultRoute && controller.currentActionId === "diagnostics.system-health"; result: diagnosticsService.systemHealthResult }
+            NetworkDiagnosticView { anchors.fill: parent; visible: controller.route === controller.resultRoute && controller.currentActionId === "diagnostics.network-diagnostic"; result: diagnosticsService.networkDiagnosticResult }
           }
         }
       }

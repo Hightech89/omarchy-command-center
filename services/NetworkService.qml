@@ -41,6 +41,7 @@ Scope {
 
   function _request(kind, context) {
     if (kind === "route") return { actionId: context.actionId + ".route", executable: "/usr/bin/ip", arguments: ["-j", "route", "show", "default"], timeoutMs: 2000 }
+    if (kind === "route6") return { actionId: context.actionId + ".route6", executable: "/usr/bin/ip", arguments: ["-j", "-6", "route", "show", "default"], timeoutMs: 2000 }
     if (kind === "link") return { actionId: context.actionId + ".link", executable: "/usr/bin/ip", arguments: ["-j", "link", "show"], timeoutMs: 2000 }
     if (kind === "address") return { actionId: context.actionId + ".address", executable: "/usr/bin/ip", arguments: ["-j", "address", "show"], timeoutMs: 2000 }
     if (kind === "resolver-status") return { actionId: context.actionId + ".resolver", executable: "/usr/bin/resolvectl", arguments: ["--json=short", "status"], timeoutMs: 2000 }
@@ -59,6 +60,7 @@ Scope {
 
   function _sourceFor(kind) {
     if (kind === "route") return _source("/usr/bin/ip", "ip -j route show default")
+    if (kind === "route6") return _source("/usr/bin/ip", "ip -j -6 route show default")
     if (kind === "link") return _source("/usr/bin/ip", "ip -j link show")
     if (kind === "address") return _source("/usr/bin/ip", "ip -j address show")
     if (kind === "resolver-status") return _source("/usr/bin/resolvectl", "resolvectl --json=short status")
@@ -134,7 +136,7 @@ Scope {
     }
     var text = kind === "ports" ? (execution.data && Array.isArray(execution.data.rows) ? execution.data.rows.join("\n") : "") : _executionText(execution, "stdout")
     var parsed
-    if (kind === "route") parsed = NetworkParsers.parseIpRouteJson(text)
+    if (kind === "route" || kind === "route6") parsed = NetworkParsers.parseIpRouteJson(text, kind === "route6" ? "ipv6" : "ipv4")
     else if (kind === "link") parsed = NetworkParsers.parseIpLinkJson(text)
     else if (kind === "address") parsed = NetworkParsers.parseIpAddressJson(text)
     else if (kind === "resolver-status") parsed = NetworkParsers.parseResolvectlStatusJson(text)
@@ -167,14 +169,18 @@ Scope {
       if (failed) result = Result.makeResult(context.actionId, failed.status, null, { message: failed.message, reason: failed.reason, source: failed.source, observedAt: failed.observedAt, completeness: Result.Completeness.Partial })
       else {
         var dnsData = _ok(parts.dns) ? parts.dns.data : { global: null, links: [] }
-        var derived = NetworkParsers.deriveNetworkOverview(parts.route.data, parts.link.data, parts.address.data, dnsData)
+        var routes = parts.route.data.routes.concat(_ok(parts.route6) ? parts.route6.data.routes : [])
+        var derived = NetworkParsers.deriveNetworkOverview({ routes: routes }, parts.link.data, parts.address.data, dnsData)
         if (!derived.ok) result = Result.makeResult(context.actionId, Result.Status.Error, null, { message: derived.message, reason: derived.reason, observedAt: _nowIso() })
         else {
-          var partial = context.feature === "overview" && !_ok(parts.dns)
+          var partial = context.feature === "overview" && (!_ok(parts.dns) || !_ok(parts.route6))
           result = Result.success(context.actionId, derived.data, { message: derived.data.connectionState === "connected-local" ? "Connected locally." : "Local network state observed.",
             source: _source("multiple fixed read-only sources", context.feature === "dashboard" ? "ip -j route/link/address" : "ip -j route/link/address and resolvectl status"),
             observedAt: _nowIso(), completeness: partial || derived.completeness === "partial" ? Result.Completeness.Partial : Result.Completeness.Complete,
-            evidence: partial ? [{ component: "dns", status: parts.dns.status, reason: parts.dns.reason, message: parts.dns.message }] : [] })
+            evidence: partial ? [
+              ...(!_ok(parts.route6) ? [{ component: "route6", status: parts.route6.status, reason: parts.route6.reason, message: parts.route6.message }] : []),
+              ...(!_ok(parts.dns) ? [{ component: "dns", status: parts.dns.status, reason: parts.dns.reason, message: parts.dns.message }] : [])
+            ] : [] })
         }
       }
     } else if (context.feature === "ports") {
@@ -204,6 +210,7 @@ Scope {
           completeness: _ok(a) && _ok(aaaa) ? Result.Completeness.Complete : Result.Completeness.Partial })
       }
     }
+    result.serviceGeneration = context.generation
     _publish(context.feature, result, true)
   }
 
@@ -249,7 +256,7 @@ Scope {
     return 0
   }
 
-  function refreshNetworkOverview() { var c = _newContext("overview", "network.overview", 4); _enqueue(c, "route", "route"); _enqueue(c, "link", "link"); _enqueue(c, "address", "address"); _enqueue(c, "resolver-status", "dns"); return c.generation }
+  function refreshNetworkOverview() { var c = _newContext("overview", "network.overview", 5); _enqueue(c, "route", "route"); _enqueue(c, "route6", "route6"); _enqueue(c, "link", "link"); _enqueue(c, "address", "address"); _enqueue(c, "resolver-status", "dns"); return c.generation }
   function refreshListeningPorts() { var c = _newContext("ports", "network.listening-ports", 1); _enqueue(c, "ports", "ports"); return c.generation }
   function pingHost(input) { var checked = _validatedPing(input); if (!checked.ok) return _rejectInput("ping", "network.ping-host", checked); var c = _newContext("ping", "network.ping-host", 1, checked); _enqueue(c, "ping", "ping"); return c.generation }
   function lookupDns(input) { var checked = _validatedDns(input); if (!checked.ok) return _rejectInput("dns", "network.dns-lookup", checked); var c = _newContext("dns", "network.dns-lookup", 2, checked); _enqueue(c, "dns-a", "a"); _enqueue(c, "dns-aaaa", "aaaa"); return c.generation }

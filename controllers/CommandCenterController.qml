@@ -15,6 +15,7 @@ QtObject {
   readonly property var catalog: CommandCatalog.Actions
   property var systemService: null
   property var networkService: null
+  property var diagnosticsService: null
 
   property string currentActionId: ""
   property string route: State.Route.Root
@@ -75,6 +76,8 @@ QtObject {
     if (currentActionId === "system.failed-services" && systemService) { systemService.refreshFailedServices(); return true }
     if (currentActionId === "network.overview" && networkService) { networkService.refreshNetworkOverview(); return true }
     if (currentActionId === "network.listening-ports" && networkService) { networkService.refreshListeningPorts(); return true }
+    if (currentActionId === "diagnostics.system-health" && diagnosticsService) { diagnosticsService.startSystemHealth(); return true }
+    if (currentActionId === "diagnostics.network-diagnostic" && diagnosticsService) { diagnosticsService.startNetworkDiagnostic(); return true }
     return false
   }
 
